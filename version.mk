@@ -1,12 +1,4 @@
-# Don't forget to update the version number!
-# Versions should come from batch file now
-# ROM_VERSION := 1
-# ROM_MOD := 06
-$(warning "*****************")
-$(warning $(ROM_VERSION))
-$(warning $(ROM_MOD))
-$(warning "*****************")
-
+# Versions come from batch file
 ROMSTAT_VER := V$(ROM_VERSION)
 GOO_VER := $(ROM_MOD)
 
