@@ -45,7 +45,7 @@ on fs
     setprop ro.crypto.tmpfs_options size=128m,mode=0771,uid=1000,gid=1000
 
     setprop ro.adb.secure 1
-	 setprop persist.service.adb.enable 0
+    setprop persist.service.adb.enable 1
 
     # add zram parameters
     write /proc/sys/vm/page-cluster 0

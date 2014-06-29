@@ -11,8 +11,3 @@ if [ -e /dev/frandom ]; then
   mv /dev/random /dev/random.bak
   ln /dev/frandom /dev/random
 fi
-
-# delete the script 00aromstat, it should run only once after flashing
-mount -o remount,rw /system
-rm -rf /system/etc/init.d/00aromstat
-rm -rf /etc/init.d/00aromstat
