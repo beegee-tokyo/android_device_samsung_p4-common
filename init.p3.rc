@@ -4,13 +4,9 @@ on early-init
     mount debugfs debugfs /sys/kernel/debug
 
 on init
-    chmod 0701 /mnt/media_rw
     # See storage config details at http://source.android.com/tech/storage/
-    mkdir /mnt/media_rw/usbdrive 0775 system system
     mkdir /mnt/shell/emulated 0700 shell shell
     mkdir /storage/emulated 0555 root root
-
-    mkdir /storage/usbdrive 0000 system system
 
     export EXTERNAL_STORAGE /storage/emulated/legacy
     export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
@@ -22,9 +18,11 @@ on init
     symlink /storage/emulated/legacy /storage/sdcard0
     symlink /mnt/shell/emulated/0 /storage/emulated/legacy
 
+    # create directory for mounting usb drives
+    mkdir /storage/usbdrive0 0664 system system
     # for backwards compatibility
-    symlink /storage/usbdrive /usbdrive
-    symlink /storage/usbdrive /mnt/usbdrive
+    symlink /storage/usbdrive0 /usbdrive
+    symlink /storage/usbdrive0 /mnt/usbdrive
 
     mkdir /efs 0771 system system
     
@@ -40,16 +38,8 @@ on fs
     exec sfsck /dev/block/platform/sdhci-tegra.3/by-num/p8 ext4 encryptable
 
     mount_all ./fstab.p3
-    swapon_all ./fstab.p3
 
     setprop ro.crypto.tmpfs_options size=128m,mode=0771,uid=1000,gid=1000
-
-    setprop ro.adb.secure 1
-    setprop persist.service.adb.enable 1
-
-    # add zram parameters
-    write /proc/sys/vm/page-cluster 0
-    write /proc/sys/vm/swappiness 70
 
 on post-fs-data
 # we will remap this as /storage/sdcard0 with the sdcard fuse tool
@@ -94,6 +84,7 @@ on post-fs-data
     mkdir /data/misc/dhcpcd 0771 dhcp dhcp
     chown dhcp dhcp /data/misc/dhcpcd
     chown dhcp dhcp /data/misc/dhcp
+    setprop wifi.interface wlan0
 
 # Change Permission /data/app for booting time
     chmod 0771 /data/app
@@ -166,10 +157,6 @@ on boot
     chown system radio /sys/class/host_notify/usb_otg/booster
     chmod 0664 /sys/class/host_notify/usb_otg/booster
 
-# Force USB charging
-    chmod 0664 /sys/class/power_supply/battery/force_usb_charging
-    write /sys/class/power_supply/battery/force_usb_charging 1
-
 # usb detect
     mkdir /dev/bus 0755 root root
     mkdir /dev/bus/usb 0755 root root
@@ -182,13 +169,8 @@ on boot
     # power up/down interface
     chmod 0660 /sys/class/rfkill/rfkill0/state
     chmod 0660 /sys/class/rfkill/rfkill0/type
-    chmod 0220 /proc/bluetooth/sleep/lpm
-    chmod 0220 /proc/bluetooth/sleep/btwrite
     chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/state
     chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/type
-    chown bluetooth net_bt_stack /proc/bluetooth/sleep/lpm
-    chown bluetooth net_bt_stack /proc/bluetooth/sleep/btwrite
-    write /sys/class/rfkill/rfkill0/state 0
 
     # bluetooth MAC address programming
     chown bluetooth net_bt_stack ro.bt.bdaddr_path
@@ -257,19 +239,18 @@ on boot
     write /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor interactive
     write /sys/module/cpuidle/parameters/lp2_in_idle 0
 
-# Set IO scheduler
-    write /sys/block/mmcblk0/queue/scheduler cfq
-
 # Interactive (initial) setup
     write /sys/devices/system/cpu/cpufreq/interactive/boost_factor 2
     write /sys/devices/system/cpu/cpufreq/interactive/input_boost 1
     write /sys/devices/system/cpu/cpufreq/interactive/sustain_load 80
 
-# Disable KSM
+# Enable USB charging by default
+    write /sys/class/power_supply/battery/force_usb_charging 1
+
+# Enable KSM
      write /sys/kernel/mm/ksm/sleep_millisecs 1400
      write /sys/kernel/mm/ksm/pages_to_scan 200
-     chmod 0666 /sys/kernel/mm/ksm/run
-     write /sys/kernel/mm/ksm/run 0
+     write /sys/kernel/mm/ksm/run 1
 
 # DEBUG_LEVEL
     chown system radio /sys/devices/platform/sec_debug_level
@@ -398,17 +379,20 @@ service gps-daemon /system/bin/gpsd
 service sdcard /system/bin/sdcard /data/media /mnt/shell/emulated 1023 1023
     class late_start
 
-# usbdrive through OTG daemon running as media_rw (1023)
-service fuse_usbdrive /system/bin/sdcard -u 1023 -g 1023 /mnt/media_rw/usbdrive /storage/usbdrive
-    class late_start
-    disabled
-
 # bugreport is triggered by the VOLUME-DOWN and VOLUME-UP keys
 service bugreport /system/bin/dumpstate -d -v -o /data/storage/bugreports/bugreport
     class main
     disabled
     oneshot
     keycodes 115 114
+
+# Mount usb drives as /usbdrive0. Generally usb drives are formatted with FAT
+# filesystem, so we support FAT as of now.
+on device-added-/sys/block/sda
+    mount vfat /dev/block/sda /storage/usbdrive0
+
+on device-removed-/sys/block/sda
+    umount /storage/usbdrive0
 
 # For 3g tabs
 service cpboot-daemon /sbin/cbd -d -o t -p 7

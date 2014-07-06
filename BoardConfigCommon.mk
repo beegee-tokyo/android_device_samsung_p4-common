@@ -22,16 +22,22 @@ BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR ?= device/samsung/p4-common/bluetoot
 BOARD_USES_GENERIC_AUDIO := false
 USE_CAMERA_STUB := false
 
-#KitKat flags
-BOARD_NEEDS_OLD_HWC_API := true
-BOARD_NEED_OMX_COMPAT := true
+# KitKat flags
 BOARD_USE_MHEAP_SCREENSHOT := true
-BOARD_EGL_WORKAROUND_BUG_10194508 := true
-BOARD_EGL_NEEDS_FNW := true
 TARGET_RUNNING_WITHOUT_SYNC_FRAMEWORK := true
-NEED_WORKAROUND_CORTEX_A9_745320 := true
-SKIP_SET_METADATA := true
 ICS_CAMERA_BLOB := true
+BOARD_CAMERA_HAVE_ISO := true
+BOARD_USES_PROPRIETARY_OMX := TF101
+#BOARD_NEEDS_OLD_HWC_API := true
+#BOARD_NEED_OMX_COMPAT := true
+#BOARD_EGL_NEEDS_FNW := true
+#NEED_WORKAROUND_CORTEX_A9_745320 := true
+#BOARD_USES_PROPRIETARY_LIBCAMERA := true
+#BOARD_SECOND_CAMERA_DEVICE := true
+#USE_CAMERA_STUB := true
+#BOARD_VENDOR_USE_NV_CAMERA := true
+
+# Flash compatibility
 COMMON_GLOBAL_CFLAGS += -DNEEDS_VECTORIMPL_SYMBOLS
 
 DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
@@ -48,9 +54,7 @@ TARGET_ARCH_VARIANT_FPU := vfpv3-d16
 TARGET_CPU_SMP := true
 #TARGET_HAVE_TEGRA_ERRATA_657451 := true
 ARCH_ARM_HAVE_TLS_REGISTER := true
-ARCH_ARM_HIGH_OPTIMIZATION := true
 ARCH_ARM_USE_NON_NEON_MEMCPY := true
-HAVE_SELINUX := false
 
 BOARD_KERNEL_BASE := 0x10000000
 BOARD_KERNEL_CMDLINE := 
@@ -71,13 +75,18 @@ MAX_EGL_CACHE_KEY_SIZE := 4096
 MAX_EGL_CACHE_SIZE := 2146304
 NUM_FRAMEBUFFER_SURFACE_BUFFERS := 3
 BOARD_EGL_CFG := device/samsung/p4-common/egl.cfg
+BOARD_EGL_WORKAROUND_BUG_10194508 := true
+BOARD_EGL_SKIP_FIRST_DEQUEUE := true
 
 #BOARD_USES_HGL := true
 #BOARD_USES_OVERLAY := true
 USE_OPENGL_RENDERER := true
 
-COMMON_GLOBAL_CFLAGS += -DICS_AUDIO_BLOB -DOLD_TEGRA -DHAVE_PRE_KITKAT_AUDIO_BLOB -DAUDIO_LEGACY_HACK 
-HAVE_PRE_KITKAT_AUDIO_BLOB := true
+BOARD_HAVE_PRE_KITKAT_AUDIO_BLOB := true
+COMMON_GLOBAL_CFLAGS += -DICS_AUDIO_BLOB
+COMMON_GLOBAL_CFLAGS += -DAUDIO_LEGACY_HACK
+# skia SIGILL bootloop fix
+COMMON_GLOBAL_CFLAGS += -DOLD_TEGRA
 
 TARGET_RECOVERY_PIXEL_FORMAT := "RGBX_8888"
 #TARGET_RECOVERY_UI_LIB := librecovery_ui_ventana
@@ -91,7 +100,11 @@ BOARD_HAS_LARGE_FILESYSTEM := true
 TARGET_RECOVERY_INITRC := device/samsung/p4-common/recovery/init.rc
 
 RECOVERY_FSTAB_VERSION := 2
+ifeq ($(F2FS_BUILD), true)
+TARGET_RECOVERY_FSTAB := device/samsung/p4-common/fstab.p3-f2fs
+else
 TARGET_RECOVERY_FSTAB := device/samsung/p4-common/fstab.p3
+endif
 
 # Indicate that the board has an Internal SD Card
 BOARD_HAS_SDCARD_INTERNAL := true
@@ -100,6 +113,7 @@ BOARD_HAS_SDCARD_INTERNAL := true
 #TARGET_RECOVERY_UPDATER_LIBS += librecovery_updater_ventana
 TARGET_RELEASETOOLS_EXTENSIONS := device/samsung/p4-common
 TARGET_USERIMAGES_USE_EXT4 := true
+TARGET_USERIMAGES_USE_F2FS := true
 BOARD_FLASH_BLOCK_SIZE := 4096
 
 # Wifi related defines
@@ -113,11 +127,11 @@ BOARD_LEGACY_NL80211_STA_EVENTS := true
 
 WIFI_DRIVER_MODULE_PATH     := "/system/lib/modules/dhd.ko"
 WIFI_DRIVER_FW_PATH_PARAM   := "/sys/module/dhd/parameters/firmware_path"
-WIFI_DRIVER_FW_PATH_AP      := "/system/etc/wifi/bcm4330_apsta.bin"
-WIFI_DRIVER_FW_PATH_STA     := "/system/etc/wifi/bcm4330_sta.bin"
-WIFI_DRIVER_FW_PATH_P2P     := "/system/etc/wifi/bcm4330_p2p.bin"
+WIFI_DRIVER_FW_PATH_AP      := "/system/etc/wifi/bcmdhd_apsta.bin"
+WIFI_DRIVER_FW_PATH_STA     := "/system/etc/wifi/bcmdhd_sta.bin"
+WIFI_DRIVER_FW_PATH_P2P     := "/system/etc/wifi/bcmdhd_p2p.bin"
 WIFI_DRIVER_MODULE_NAME     := "dhd"
-WIFI_DRIVER_MODULE_ARG      := "iface_name=wlan0 firmware_path=/system/etc/wifi/bcm4330_sta.bin nvram_path=/system/etc/wifi/nvram_net.txt"
+WIFI_DRIVER_MODULE_ARG      := "iface_name=wlan0 firmware_path=/system/etc/wifi/bcmdhd_sta.bin nvram_path=/system/etc/wifi/nvram_net.txt"
 
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_BCM := true
@@ -133,26 +147,17 @@ BOARD_CHARGING_MODE_BOOTING_LPM := "/sys/class/power_supply/battery/charging_mod
 # Custom graphics for recovery
 BOARD_CUSTOM_GRAPHICS := ../../../device/samsung/p4-common/recovery/graphics.c
 
-# Boot Animation
+# Preload bootanimation in to memory
 TARGET_BOOTANIMATION_PRELOAD := true
 TARGET_BOOTANIMATION_TEXTURE_CACHE := true
 TARGET_BOOTANIMATION_USE_RGB565 := true
-
-BOARD_MALLOC_ALIGNMENT := 16
-TARGET_EXTRA_CFLAGS := $(call cc-option,-mtune=cortex-a9) $(call cc-option,-mcpu=cortex-a9)
-
-#define to use all of the Linaro Cortex-A9 optimized string funcs,
-#instead of subset known to work on all machines
-USE_ALL_OPTIMIZED_STRING_FUNCS := true
-
-# Skip droiddoc build to save build time
-BOARD_SKIP_ANDROID_DOC_BUILD := true
-
-# Use a smaller subset of system fonts to keep image size lower
-#SMALLER_FONT_FOOTPRINT := true
+#BOARD_NEEDS_LOWFPS_BOOTANI := true
 
 # Suppress EMMC WIPE
 BOARD_SUPPRESS_EMMC_WIPE := true
+
+# Skip SELinux metadata
+SKIP_SET_METADATA := true
 
 #TWRP Flags
 DEVICE_RESOLUTION := 1280x800
@@ -160,12 +165,14 @@ RECOVERY_SDCARD_ON_DATA := true
 BOARD_HAS_NO_REAL_SDCARD := true
 TW_NO_REBOOT_BOOTLOADER := true
 TW_NO_USB_STORAGE := true
-TW_NO_PARTITION_SD_CARD := true
 TW_FLASH_FROM_STORAGE := true
 TW_HAS_DOWNLOAD_MODE := true
-TW_EXCLUDE_SUPERSU := true
-TW_NO_EXFAT_FUSE := true
-TW_NO_EXFAT := true
 SP1_NAME := "efs"
 SP1_BACKUP_METHOD := files
 SP1_MOUNTABLE := 1
+TW_ALWAYS_RMRF := true
+TW_NO_EXFAT_FUSE := true
+TW_BRIGHTNESS_PATH := "/sys/devices/platform/cmc623_pwm_bl/backlight/pwm-backlight/brightness"
+TW_MAX_BRIGHTNESS := 255
+TW_NO_EXFAT := true
+TW_EXCLUDE_SUPERSU := true

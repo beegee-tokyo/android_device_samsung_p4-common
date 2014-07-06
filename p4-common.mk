@@ -27,10 +27,17 @@ TARGET_SCREEN_HEIGHT := 800
 
 PRODUCT_COPY_FILES := \
     $(LOCAL_PATH)/init.p3.rc:root/init.p3.rc \
-    $(LOCAL_PATH)/fstab.p3:root/fstab.p3 \
     $(LOCAL_PATH)/ueventd.p3.rc:root/ueventd.p3.rc \
     $(LOCAL_PATH)/lpm.rc:root/lpm.rc \
     $(LOCAL_PATH)/init.p3.usb.rc:root/init.p3.usb.rc
+
+ifeq ($(F2FS_BUILD), true)
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/fstab.p3-f2fs:root/fstab.p3
+else
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/fstab.p3:root/fstab.p3
+endif
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/media_profiles.xml:system/etc/media_profiles.xml \
@@ -67,6 +74,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
     ro.sf.lcd_density=160 \
     ro.bq.gpu_to_cpu_unsupported=1 \
     dalvik.vm.dexopt-data-only=1 \
+    dalvik.vm.debug.alloc=0 \
     debug.hwui.render_dirty_regions=false \
     ro.zygote.disable_gl_preload=true \
     persist.sys.usb.config=adb \
@@ -80,25 +88,38 @@ PRODUCT_PROPERTY_OVERRIDES := \
     debug.egl.hw=1 \
     debug.composition.type=gpu
 
+# Disable SELinux
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.boot.selinux=disabled \
+    ro.build.selinux=0
+
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
     persist.service.adb.enable=0 \
     persist.service.debuggable=1 \
     persist.sys.usb.config=mtp,adb \
-    ro.adb.secure=1
+    ro.adb.secure=1 \
+    persist.sys.root_access=1
+
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
+    persist.sys.usb.config=mtp
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/wifi/wpa_supplicant.conf:system/etc/wifi/wpa_supplicant.conf \
-    $(LOCAL_PATH)/wifi/bcm4330_apsta.bin:system/etc/wifi/bcm4330_apsta.bin \
-    $(LOCAL_PATH)/wifi/bcm4330_p2p.bin:system/etc/wifi/bcm4330_p2p.bin \
-    $(LOCAL_PATH)/wifi/bcm4330_sta.bin:system/etc/wifi/bcm4330_sta.bin
+    $(LOCAL_PATH)/wifi/bcmdhd_apsta.bin:system/etc/wifi/bcmdhd_apsta.bin \
+    $(LOCAL_PATH)/wifi/bcmdhd_p2p.bin:system/etc/wifi/bcmdhd_p2p.bin \
+    $(LOCAL_PATH)/wifi/bcmdhd_sta.bin:system/etc/wifi/bcmdhd_sta.bin
 
 PRODUCT_PACKAGES += \
         libinvensense_mpl
 
+# Torch
+PRODUCT_PACKAGES += \
+        Torch
+
 # Audio
 PRODUCT_PACKAGES += \
         audio.a2dp.default \
-	audio.usb.default \
+        audio.usb.default \
         libaudioutils \
         libtinyalsa
 
@@ -131,6 +152,10 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/camera/nvcamera.conf:system/etc/nvcamera.conf \
     $(LOCAL_PATH)/bluetooth/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf
 
+# frandom
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/prebuilt/etc/init.d/00random:system/etc/init.d/00random \
+
 PRODUCT_CHARACTERISTICS := tablet,nosdcard
 
 PRODUCT_TAGS += dalvik.gc.type-precise
@@ -139,24 +164,23 @@ PRODUCT_PACKAGES += \
     librs_jni \
     com.android.future.usb.accessory \
     power.p3 \
-    libnetcmdiface
-
-# Disable SELinux
-PRODUCT_PROPERTY_OVERRIDES += \
-    ro.boot.selinux=disabled \
-    ro.build.selinux=0
+    libnetcmdiface \
+    WiFiDirectDemo
 
 # Filesystem management tools
 PRODUCT_PACKAGES += \
-	make_ext4fs \
-	setup_fs
+    make_ext4fs \
+    setup_fs
 
 DEVICE_PACKAGE_OVERLAYS := \
     $(LOCAL_PATH)/overlay
 
-# init.d scripts
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/prebuilt/etc/init.d/00random:system/etc/init.d/00random
+# Recovery
+ifeq ($(F2FS_BUILD), true)
+PRODUCT_COPY_FILES += $(LOCAL_PATH)/twrp.fstab-f2fs:recovery/root/etc/twrp.fstab
+else
+PRODUCT_COPY_FILES += $(LOCAL_PATH)/twrp.fstab:recovery/root/etc/twrp.fstab
+endif
 
 $(call inherit-product, frameworks/native/build/tablet-dalvik-heap.mk)
 
