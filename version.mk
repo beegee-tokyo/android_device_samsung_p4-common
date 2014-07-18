@@ -1,10 +1,12 @@
 # Versions come from batch file
 ROMSTAT_VER := V$(ROM_VERSION)
 GOO_VER := $(ROM_MOD)
+PROP_DATE := $(NOW)
 
 PRODUCT_PROPERTY_OVERRIDES += \
 	ro.romstats.version=$(ROMSTAT_VER) \
-	ro.goo.version=$(GOO_VER)
+	ro.goo.version=$(GOO_VER) \
+	ro.romstats.builddate=$(PROP_DATE)
 	
 # BeeGee properties
 PRODUCT_PROPERTY_OVERRIDES += \
